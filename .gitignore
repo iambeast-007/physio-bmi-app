@@ -13,3 +13,6 @@ Thumbs.db
 
 # Ignore VS Code project settings
 .vscode/
+
+# Ignore user data file
+users.json
