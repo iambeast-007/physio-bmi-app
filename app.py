@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
 from PIL import Image
 import base64
 from io import BytesIO
@@ -50,12 +51,12 @@ for key in ["logged_in", "username", "profile_photo", "show_uploader", "page"]:
         else:
             st.session_state[key] = None
 
-# --- Authentication Flow ---
+# --- Authentication Flow
 users = load_users()
 
 # --- Login Page
 if st.session_state.page == "login" and not st.session_state.logged_in:
-    st.sidebar.header("🔐 Login to Physio BMI App")
+    st.sidebar.header("🔐 Login to your BMI App")
     username = st.sidebar.text_input("Username")
     password = st.sidebar.text_input("Password", type="password")
 
@@ -100,7 +101,8 @@ elif st.session_state.page == "register" and not st.session_state.logged_in:
 
 # --- Main App (after login)
 elif st.session_state.logged_in:
-    # --- Sidebar Profile
+
+    # --- Sidebar Profile Section
     if st.session_state.profile_photo:
         image = st.session_state.profile_photo
     else:
@@ -145,46 +147,135 @@ elif st.session_state.logged_in:
 
     st.sidebar.markdown(f"### 👋 Welcome, **{st.session_state.username}!**")
 
-    if st.sidebar.button("🚪 Logout"):
-        for k in ["logged_in", "username", "profile_photo", "show_uploader"]:
-            st.session_state[k] = False if k == "logged_in" else None
-        st.session_state.page = "login"
-        st.rerun()
+    # --- Sidebar Navigation Menu (stateful)
+    with st.sidebar:
+        if "selected_page" not in st.session_state:
+            st.session_state.selected_page = "Home"
 
-    # --- Main BMI Page
-    st.title("🏥 BMI Calculator")
-    st.caption("A simple web app to calculate BMI and provide basic health advice.")
-
-    st.header("Enter your details")
-    name = st.text_input("Name", value=st.session_state.username or "")
-    age = st.number_input("Age", min_value=1, max_value=120, value=25)
-    height_cm = st.number_input("Height (cm)", min_value=50.0, max_value=250.0, value=170.0)
-    weight_kg = st.number_input("Weight (kg)", min_value=10.0, max_value=300.0, value=65.0)
-
-    if st.button("Calculate BMI"):
-        height_m = height_cm / 100
-        bmi = round(weight_kg / (height_m ** 2), 2)
-
-        # --- BMI Logic with Icons
-        if bmi < 18.5:
-            category, advice, icon = "Underweight", "You may need to gain some weight. Consult your physiotherapist.", "🦴"
-        elif bmi < 25:
-            category, advice, icon = "Normal weight", "Great! Maintain your healthy lifestyle.", "🧘"
-        elif bmi < 30:
-            category, advice, icon = "Overweight", "You might benefit from regular physical activity.", "🍔"
-        else:
-            category, advice, icon = "Obesity", "Consult your physiotherapist for a personalized workout plan.", "🐻‍❄️"
-
-        st.markdown(
-            f"""
-            <div style='text-align:center;'>
-                <h2 style='color:#4CAF50;'>Your BMI is <b>{bmi}</b></h2>
-                <h3>{icon} <b>{category}</b> {icon}</h3>
-            </div>
-            """,
-            unsafe_allow_html=True
+        selected = option_menu(
+            menu_title="Main Menu",
+            options=["Home", "BMI Calculator", "About"],
+            icons=["house", "calculator", "info-circle"],
+            menu_icon="heart-eyes-fill",
+            default_index=["Home", "BMI Calculator", "About"].index(st.session_state.selected_page),
         )
-        st.info(advice)
+
+        if selected != st.session_state.selected_page:
+            st.session_state.selected_page = selected
+            st.rerun()
+
+        if st.button("🚪 Logout"):
+            for k in ["logged_in", "username", "profile_photo", "show_uploader", "selected_page"]:
+                st.session_state[k] = False if k == "logged_in" else None
+            st.session_state.page = "login"
+            st.rerun()
+
+    # --- PAGE LOGIC ---
+    selected = st.session_state.selected_page
+
+    # --- PAGE: HOME
+    if selected == "Home":
+        st.title("🏠 Welcome to Physio BMI Dashboard")
+        st.write("""
+        Track your BMI, manage your profile, and get physiotherapist recommendations  
+        for a healthier, more active life! 💪
+        """)
+        st.image("https://cdn-icons-png.flaticon.com/512/706/706164.png", width=200)
+
+    # --- PAGE: BMI CALCULATOR
+    elif selected == "BMI Calculator":
+        st.title("⚖️ BMI Calculator")
+        st.caption("A simple web app to calculate BMI and provide detailed health insights.")
+
+        st.header("Enter your details")
+        name = st.text_input("Name", value=st.session_state.username or "")
+        age = st.number_input("Age", min_value=1, max_value=120, value=25)
+        gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+        height_cm = st.number_input("Height (cm)", min_value=50.0, max_value=250.0, value=170.0)
+        weight_kg = st.number_input("Weight (kg)", min_value=10.0, max_value=300.0, value=65.0)
+
+        if st.button("Calculate BMI"):
+            height_m = height_cm / 100
+            bmi = round(weight_kg / (height_m ** 2), 2)
+
+            # --- Determine Category
+            if bmi < 18.5:
+                category, advice, icon, risk = (
+                    "Underweight",
+                    "You may need to gain some weight. Increase calorie intake with nutritious foods.",
+                    "🦴",
+                    "Low – but possible nutrient deficiencies."
+                )
+            elif bmi < 25:
+                category, advice, icon, risk = (
+                    "Normal weight",
+                    "Great! Maintain your healthy lifestyle with regular exercise and balanced meals.",
+                    "🧘",
+                    "Minimal – keep it up!"
+                )
+            elif bmi < 30:
+                category, advice, icon, risk = (
+                    "Overweight",
+                    "Try to include more physical activity and reduce processed food intake.",
+                    "🍔",
+                    "Moderate – may increase risk of heart disease."
+                )
+            else:
+                category, advice, icon, risk = (
+                    "Obesity",
+                    "Consult a physiotherapist or dietitian for a personalized health plan.",
+                    "🐻‍❄️",
+                    "High – likely associated with diabetes or heart disease."
+                )
+
+            # --- Ideal weight range
+            min_weight = round(18.5 * (height_m ** 2), 1)
+            max_weight = round(24.9 * (height_m ** 2), 1)
+
+            # --- Caloric recommendation (approximate)
+            if gender == "Male":
+                bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + 5
+            else:
+                bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age - 161
+
+            maintenance_calories = int(bmr * 1.55)  # moderate activity assumption
+
+            # --- Display Results
+            st.markdown(
+                f"""
+                <div style='text-align:center;'>
+                    <h2 style='color:#4CAF50;'>Your BMI is <b>{bmi}</b></h2>
+                    <h3>{icon} <b>{category}</b> {icon}</h3>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            st.success(f"**Advice:** {advice}")
+            st.info(f"**Health Risk Level:** {risk}")
+
+            st.write("---")
+            st.markdown(
+                f"""
+                ### 📊 Additional Insights:
+                - **Ideal Weight Range:** {min_weight} kg – {max_weight} kg  
+                - **Current Weight:** {weight_kg} kg  
+                - **Recommended Calorie Intake:** ~{maintenance_calories} kcal/day  
+                - **Height:** {height_cm} cm  
+                - **Age:** {age} years  
+                """
+            )
+
+            st.write("💡 _Tip: Reassess your BMI every 4–6 weeks to track your progress._")
+
+    # --- PAGE: ABOUT
+    elif selected == "About":
+        st.title("ℹ️ About This App")
+        st.write("""
+        **Physio BMI App** helps users calculate their BMI,  
+        maintain a fitness record, and get physiotherapy-related advice.  
+        Built with ❤️ using **Streamlit**.
+        """)
 
     st.divider()
     st.caption("Developed with ❤️ using Streamlit | Physiotherapy Health Tool")

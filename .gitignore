@@ -16,3 +16,6 @@ Thumbs.db
 
 # Ignore user data file
 users.json
+
+# Ignore Streamlit files
+.streamlit/config.toml
