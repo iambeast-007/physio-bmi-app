@@ -114,7 +114,6 @@ st.caption("A simple web app to calculate BMI and provide basic health advice.")
 
 if not st.session_state.logged_in:
     st.warning("🔒 Please log in from the sidebar to access the BMI calculator.")
-    st.info("Try credentials:\n- Arka / admin123\n- testuser / test123")
     st.stop()
 
 # --- BMI Form ---
