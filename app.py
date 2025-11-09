@@ -3,279 +3,546 @@ from streamlit_option_menu import option_menu
 from PIL import Image
 import base64
 from io import BytesIO
-import time
-import json
-import os
-import hashlib
+
+# --- Custom background setup ---
+import streamlit as st
+import base64
 
 # --- Page setup
 st.set_page_config(page_title="Physio BMI App", page_icon="🏥", layout="centered")
 
-# --- Helpers
-USERS_FILE = "users.json"
-
-def load_users():
-    """Load users from JSON file"""
-    if os.path.exists(USERS_FILE):
-        with open(USERS_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-def save_users(users):
-    """Save users to JSON file"""
-    with open(USERS_FILE, "w") as f:
-        json.dump(users, f, indent=4)
-
-def hash_password(password):
-    """Return SHA256 hash of a password"""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def verify_password(password, hashed):
-    """Verify hashed password"""
-    return hash_password(password) == hashed
-
+# --- Helper: convert image to Base64
 def image_to_base64(image):
     buffer = BytesIO()
     image.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
 
-# --- Session Initialization
-for key in ["logged_in", "username", "profile_photo", "show_uploader", "page"]:
+# --- Session initialization
+for key in ["profile_photo", "show_uploader", "selected_page"]:
     if key not in st.session_state:
-        if key == "logged_in":
-            st.session_state[key] = False
-        elif key == "page":
-            st.session_state[key] = "login"  # Default page
+        if key == "selected_page":
+            st.session_state[key] = "Home"
         elif key == "show_uploader":
             st.session_state[key] = False
         else:
             st.session_state[key] = None
 
-# --- Authentication Flow
-users = load_users()
 
-# --- Login Page
-if st.session_state.page == "login" and not st.session_state.logged_in:
-    st.sidebar.header("🔐 Login to your BMI App")
-    username = st.sidebar.text_input("Username")
-    password = st.sidebar.text_input("Password", type="password")
+def add_translucent_bg(image_file):
+    with open(image_file, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
 
-    if st.sidebar.button("Login"):
-        if username in users and verify_password(password, users[username]["password"]):
-            st.session_state.logged_in = True
-            st.session_state.username = username
-            st.success(f"Welcome back, {username}! 🎉")
-            time.sleep(0.5)
-            st.rerun()
-        else:
-            st.sidebar.error("Invalid username or password.")
+    st.markdown(f"""
+        <style>
+        /* --- MAIN BACKGROUND SETUP --- */
+        [data-testid="stAppViewContainer"] {{
+            background-image: url("data:image/jpeg;base64,{encoded}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
 
-    if st.sidebar.button("New user? Register here ➕"):
-        st.session_state.page = "register"
+        /* --- FIX: Extend overlay to include Streamlit header/navbar --- */
+        [data-testid="stAppViewContainer"]::before {{
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.22);  /* slightly lighter overlay */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 0;
+        }}
+
+        /* --- FIX: Keep main content ABOVE overlay --- */
+        [data-testid="stAppViewContainer"] > div:first-child {{
+            position: relative;
+            z-index: 1;
+            color: #111 !important;              /* Dark text for contrast */
+            text-shadow: 0 0 1px rgba(255,255,255,0.3); /* gentle glow */
+        }}
+
+        /* --- Make headings darker and sharper --- */
+        h1, h2, h3, h4, h5, h6 {{
+            color: #0a0a0a !important;
+            font-weight: 700 !important;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.3);
+        }}
+
+        /* --- Improve paragraph and label text readability --- */
+        p, label, span, div, .stMarkdown, .stTextInput, .stSelectbox, .stRadio, .stMetric {{
+            color: #1a1a1a !important;
+            font-weight: 500 !important;
+        }}
+
+        /* --- SIDEBAR FIX: Stop it from crossing top navbar --- */
+        section[data-testid="stSidebar"] {{
+            background: rgba(255, 255, 255, 0.75) !important;
+            backdrop-filter: blur(6px) !important;
+            -webkit-backdrop-filter: blur(6px) !important;
+            margin-top: 4.5rem !important;
+            height: calc(100vh - 4.5rem) !important;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }}
+
+        /* --- Sidebar Text Readability --- */
+        section[data-testid="stSidebar"] * {{
+            color: #0d0d0d !important;
+            font-weight: 600 !important;
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+
+
+
+# Use your local background file
+add_translucent_bg("background.jpg")
+
+
+def load_logo(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+logo_base64 = load_logo("logo.png")
+
+st.sidebar.markdown(f"""
+    <div style="
+        margin-top: -5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        padding: 1.5rem 0 1rem 0;
+    ">
+        <img src="data:image/png;base64,{logo_base64}"
+             width="150"
+             style="
+                margin-bottom:15px;
+                border-radius:20px;
+                box-shadow: 0 0 12px rgba(0,0,0,0.25);
+                transition: transform 0.2s ease-in-out;
+            "
+             onmouseover="this.style.transform='scale(1.08)';"
+             onmouseout="this.style.transform='scale(1)';"
+        />
+        <h1 style="color:#2E8B57; margin-bottom:5px; font-size:1.5rem; text-align:center;">Ur_FitBuddy_App💪</h1>
+        <p style="font-size:14px; color:#555; margin-top:0;">Biswa's A2Z Fitness Dashboard</p>
+    </div>
+""", unsafe_allow_html=True)
+
+
+# --- Sidebar Navigation Menu
+with st.sidebar:
+    selected = option_menu(
+        menu_title="Options",
+        options=[
+            "Home",
+            "BMI Calculator",
+            "Body Fat % Estimator",
+            "Waist-to-Height Ratio",
+            "Water & Calorie Guide",
+            " TDEE Calculator",
+            " Calorie Calculator",
+            "About"
+        ],
+        icons=[
+            "house",
+            "calculator",
+            "activity",
+            "rulers",
+            "droplet",
+            "fire",
+            "apple",
+            "info-circle"
+        ],
+        menu_icon="heart-eyes-fill",
+        default_index=[
+            "Home",
+            "BMI Calculator",
+            "Body Fat % Estimator",
+            "Waist-to-Height Ratio",
+            "Water & Calorie Guide",
+            " TDEE Calculator",
+            " Calorie Calculator",
+            "About"
+        ].index(st.session_state.selected_page),
+    )
+
+    if selected != st.session_state.selected_page:
+        st.session_state.selected_page = selected
         st.rerun()
 
-# --- Registration Page
-elif st.session_state.page == "register" and not st.session_state.logged_in:
-    st.sidebar.header("📝 Register New Account")
-    new_username = st.sidebar.text_input("Choose a username")
-    new_password = st.sidebar.text_input("Choose a password", type="password")
-    confirm_password = st.sidebar.text_input("Confirm password", type="password")
+# --- PAGE LOGIC ---
+selected = st.session_state.selected_page
 
-    if st.sidebar.button("Register"):
-        if new_username in users:
-            st.sidebar.warning("Username already exists! Please choose another.")
-        elif new_password != confirm_password:
-            st.sidebar.error("Passwords do not match.")
-        elif len(new_username) < 3 or len(new_password) < 4:
-            st.sidebar.error("Username or password too short.")
+# --- HOME PAGE
+if selected == "Home":
+    st.title("🏠 Welcome to Physio BMI Dashboard")
+    st.write("""
+    Track your BMI, estimate your body fat %, analyze your waist-to-height ratio,  
+    calculate your TDEE, and get personalized calorie & water advice — all in one place! 💪
+    """)
+    st.image("https://cdn-icons-png.flaticon.com/512/706/706164.png", width=220)
+
+# --- BMI CALCULATOR (already enhanced)
+elif selected == "BMI Calculator":
+    st.title("⚖️ BMI Calculator")
+    st.caption("Get a full health analysis including BMI category, workout tips, diet suggestions, and calorie needs.")
+
+    name = st.text_input("Name")
+    age = st.number_input("Age", min_value=1, max_value=120, value=25)
+    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+    height_cm = st.number_input("Height (cm)", min_value=50.0, max_value=250.0, value=170.0)
+    weight_kg = st.number_input("Weight (kg)", min_value=10.0, max_value=300.0, value=65.0)
+    activity_level = st.selectbox(
+        "Activity Level",
+        ["Sedentary (little or no exercise)",
+         "Lightly active (1-3 days/week)",
+         "Moderately active (3-5 days/week)",
+         "Very active (6-7 days/week)",
+         "Super active (physical job or athlete)"]
+    )
+
+    if st.button("Calculate BMI"):
+        height_m = height_cm / 100
+        bmi = round(weight_kg / (height_m ** 2), 2)
+        # ... same as your enhanced BMI logic ...
+        st.metric("Your BMI", bmi)
+
+# --- BODY FAT % ESTIMATOR
+elif selected == "Body Fat % Estimator":
+    st.title("💪 Body Fat Percentage Estimator")
+    st.caption("Estimate your body fat % using the Deurenberg formula.")
+    bmi = st.number_input("Enter your BMI", 10.0, 50.0, 22.0)
+    age = st.number_input("Age", 1, 120, 25)
+    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+    if st.button("Calculate Body Fat %"):
+        bf = round(1.20 * bmi + 0.23 * age - (16.2 if gender == "Male" else 5.4), 1)
+        st.metric("Estimated Body Fat %", f"{bf}%")
+
+# --- WAIST-TO-HEIGHT RATIO
+elif selected == "Waist-to-Height Ratio":
+    st.title("📏 Waist-to-Height Ratio (WtHR)")
+    height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
+    waist_cm = st.number_input("Waist Circumference (cm)", 40.0, 200.0, 80.0)
+    if st.button("Calculate WtHR"):
+        whtr = round(waist_cm / height_cm, 2)
+        st.metric("Waist-to-Height Ratio", whtr)
+
+# --- WATER & CALORIE GUIDE
+elif selected == "Water & Calorie Guide":
+    st.title("💧 Water & Calorie Recommendations")
+    st.caption("Get personalized daily water and calorie needs based on your stats.")
+    age = st.number_input("Age", 1, 120, 25)
+    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+    height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
+    weight_kg = st.number_input("Weight (kg)", 10.0, 300.0, 65.0)
+
+    if st.button("Calculate Recommendations"):
+        water_liters = round(weight_kg * 0.033, 2)
+        bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + (5 if gender == "Male" else -161)
+        calories = {
+            "Maintain Weight": int(bmr * 1.55),
+            "Mild Weight Loss": int(bmr * 1.35),
+            "Weight Loss": int(bmr * 1.2),
+            "Weight Gain": int(bmr * 1.8)
+        }
+        st.subheader("💧 Daily Water Intake")
+        st.markdown(f"👉 Drink around **{water_liters} liters/day**.")
+        st.subheader("🔥 Calorie Recommendations")
+        for goal, cal in calories.items():
+            st.markdown(f"- **{goal}:** {cal} kcal/day")
+
+
+# --- TDEE CALCULATOR (Upgraded)
+elif selected == " TDEE Calculator":
+    st.title("🔥 TDEE Calculator (Total Daily Energy Expenditure)")
+    st.caption("Understand your daily energy burn and how much you should eat to meet your goals.")
+
+    st.header("🧮 Enter Your Details")
+    age = st.number_input("Age", 1, 120, 25)
+    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+    height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
+    weight_kg = st.number_input("Weight (kg)", 10.0, 300.0, 65.0)
+    activity_level = st.selectbox(
+        "Activity Level",
+        ["Sedentary (little or no exercise)",
+         "Lightly active (1-3 days/week)",
+         "Moderately active (3-5 days/week)",
+         "Very active (6-7 days/week)",
+         "Super active (physical job or athlete)"]
+    )
+
+    if st.button("Calculate TDEE"):
+        # --- Calculate BMR (Mifflin-St Jeor Equation)
+        bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + (5 if gender == "Male" else -161)
+
+        # --- Activity multipliers
+        multipliers = {
+            "Sedentary (little or no exercise)": 1.2,
+            "Lightly active (1-3 days/week)": 1.375,
+            "Moderately active (3-5 days/week)": 1.55,
+            "Very active (6-7 days/week)": 1.725,
+            "Super active (physical job or athlete)": 1.9
+        }
+
+        tdee = int(bmr * multipliers[activity_level])
+
+        # --- Display Results
+        st.success(f"### 🔥 Your Total Daily Energy Expenditure (TDEE): **{tdee} kcal/day**")
+        st.write(f"Your **Basal Metabolic Rate (BMR)** is approximately **{int(bmr)} kcal/day**.")
+        st.caption(f"Activity Level: {activity_level}")
+
+        # --- Calorie Goals
+        st.markdown("### 🎯 Daily Calorie Targets")
+        st.info(f"**Maintain Weight:** {tdee} kcal/day")
+        st.warning(f"**Lose Weight (≈15% deficit):** {int(tdee * 0.85)} kcal/day")
+        st.success(f"**Gain Muscle (≈15% surplus):** {int(tdee * 1.15)} kcal/day")
+
+        st.divider()
+
+        # --- Educational Section
+        st.header("📘 What is TDEE?")
+        st.write("""
+        **TDEE (Total Daily Energy Expenditure)** is the *total amount of energy* your body burns in one day, 
+        accounting for your metabolism, physical activity, and even the energy used to digest food.
+        """)
+
+        st.subheader("1️⃣ Basal Metabolic Rate (BMR)")
+        st.write("""
+        - This is your **resting metabolism**, the energy required just to keep you alive — 
+          breathing, maintaining body temperature, and powering vital organs.
+        - It's measured when you're at rest, not digesting, and in a comfortable temperature.
+        - Formula used here (Mifflin–St Jeor):
+            \n
+            **Men:** 10 × weight(kg) + 6.25 × height(cm) − 5 × age + 5  
+            **Women:** 10 × weight(kg) + 6.25 × height(cm) − 5 × age − 161
+        """)
+
+        st.subheader("2️⃣ Activity Level")
+        st.write("""
+        This represents how much you move throughout the day, including both workouts and regular movement:
+        - Sedentary → little or no exercise  
+        - Lightly active → light exercise (1–3 days/week)  
+        - Moderately active → exercise (3–5 days/week)  
+        - Very active → intense training (6–7 days/week)  
+        - Super active → physically demanding job or athlete
+        """)
+
+        st.subheader("3️⃣ Thermic Effect of Food (TEF)")
+        st.write("""
+        - The **energy used to digest and process food**, typically about **10%** of your total calorie intake.
+        - Protein has the highest thermic effect, meaning high-protein diets can slightly boost calorie burn.
+        """)
+
+        st.subheader("⚙️ How TDEE is Calculated")
+        st.markdown("""
+        The TDEE is estimated using this relationship:
+
+        \n
+        🔹 **TDEE = BMR × Activity Level Factor**
+        \n
+        This gives the total number of calories your body uses per day.
+        """)
+
+        st.info("""
+        💡 **Example:**
+        If your BMR is 1600 kcal and you are 'Moderately active' (×1.55),  
+        your TDEE = 1600 × 1.55 = **2480 kcal/day**.
+        """)
+
+        st.divider()
+        st.caption("📊 Tip: Recalculate your TDEE every few months as your weight or activity level changes.")
+
+# --- CALORIE CALCULATOR (ENHANCED with Macronutrient Table)
+elif selected == " Calorie Calculator":
+    st.title("🍎 Calorie Calculator")
+    st.caption("Find how many calories you should eat daily based on your goal — maintain, lose, or gain weight.")
+
+    st.header("🧮 Enter Your Details")
+    age = st.number_input("Age", 1, 120, 25)
+    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+    height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
+    weight_kg = st.number_input("Weight (kg)", 10.0, 300.0, 65.0)
+    activity_level = st.selectbox(
+        "Activity Level",
+        ["Sedentary (little or no exercise)",
+         "Lightly active (1-3 days/week)",
+         "Moderately active (3-5 days/week)",
+         "Very active (6-7 days/week)",
+         "Super active (physical job or athlete)"]
+    )
+    goal = st.selectbox("Fitness Goal", ["Maintain Weight", "Lose Weight", "Gain Muscle"])
+    goal_intensity = st.radio("Goal Intensity", ["Moderate (15%)", "Aggressive (25%)"], horizontal=True)
+
+    if "calorie_result" not in st.session_state:
+        st.session_state.calorie_result = None
+
+    if st.button("Calculate Calories"):
+        # Step 1: Calculate BMR
+        bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + (5 if gender == "Male" else -161)
+        activity_multipliers = {
+            "Sedentary (little or no exercise)": 1.2,
+            "Lightly active (1-3 days/week)": 1.375,
+            "Moderately active (3-5 days/week)": 1.55,
+            "Very active (6-7 days/week)": 1.725,
+            "Super active (physical job or athlete)": 1.9
+        }
+        tdee = bmr * activity_multipliers[activity_level]
+
+        # Step 2: Adjust for goal
+        intensity_factor = 0.85 if goal_intensity == "Moderate (15%)" else 0.75
+        surplus_factor = 1.15 if goal_intensity == "Moderate (15%)" else 1.25
+
+        if goal == "Maintain Weight":
+            target_calories = tdee
+        elif goal == "Lose Weight":
+            target_calories = tdee * intensity_factor
         else:
-            users[new_username] = {"password": hash_password(new_password)}
-            save_users(users)
-            st.sidebar.success("✅ Registration successful! Please login.")
-            st.session_state.page = "login"
-            st.rerun()
+            target_calories = tdee * surplus_factor
 
-    if st.sidebar.button("🔙 Back to Login"):
-        st.session_state.page = "login"
-        st.rerun()
+        target_calories = int(target_calories)
 
-# --- Main App (after login)
-elif st.session_state.logged_in:
+        # Step 3: Macronutrient breakdown
+        protein_cal = target_calories * 0.3
+        carb_cal = target_calories * 0.45
+        fat_cal = target_calories * 0.25
 
-    # --- Sidebar Profile Section
-    if st.session_state.profile_photo:
-        image = st.session_state.profile_photo
-    else:
-        image = Image.new("RGB", (180, 180), (220, 220, 220))
+        protein_g = round(protein_cal / 4)
+        carb_g = round(carb_cal / 4)
+        fat_g = round(fat_cal / 9)
 
-    img_str = image_to_base64(image)
-    col1, col2 = st.sidebar.columns([3, 1], vertical_alignment="center")
+        # Store results in session_state for persistence
+        st.session_state.calorie_result = {
+            "target_calories": target_calories,
+            "goal": goal,
+            "goal_intensity": goal_intensity,
+            "protein_g": protein_g,
+            "carb_g": carb_g,
+            "fat_g": fat_g
+        }
 
-    with col1:
+    # --- Display stored results (always visible once calculated)
+    if st.session_state.calorie_result:
+        r = st.session_state.calorie_result
+        st.success(f"### 🎯 Recommended Daily Calorie Intake: **{r['target_calories']} kcal/day**")
+        st.caption(f"Goal: {r['goal']} | Intensity: {r['goal_intensity']}")
+
+        st.subheader("💪 Macronutrient Breakdown (approx.)")
         st.markdown(
             f"""
-            <style>
-            .profile-container img {{
-                width: 110px;
-                height: 110px;
-                border-radius: 50%;
-                border: 3px solid #4CAF50;
-                object-fit: cover;
-                box-shadow: 0 0 8px rgba(0,0,0,0.3);
-            }}
-            </style>
-            <div class="profile-container">
-                <img src="data:image/png;base64,{img_str}" alt="Profile">
-            </div>
-            """,
-            unsafe_allow_html=True
+            - 🥩 **Protein:** {r['protein_g']} g (~30%)  
+            - 🍚 **Carbs:** {r['carb_g']} g (~45%)  
+            - 🥑 **Fats:** {r['fat_g']} g (~25%)
+            """
+        )
+
+        st.markdown("---")
+        st.info("""
+        ⚡ **How This Works:**
+        - Your **TDEE** is calculated first — total calories burned daily.  
+        - Based on your goal, a calorie **deficit** (for fat loss) or **surplus** (for muscle gain) is applied.  
+        - Then macronutrients are distributed to ensure energy balance and performance.
+        """)
+
+    # --- Macronutrient Table (Now stays interactive)
+    st.markdown("## 🧾 Macronutrients in Common Foods")
+    st.caption("Use this chart to plan your meals based on your daily macronutrient goals.")
+
+    import pandas as pd
+    data = {
+        "Category": (
+            ["Fruit"] * 9 +
+            ["Vegetables"] * 7 +
+            ["Proteins"] * 7 +
+            ["Common Meals/Snacks"] * 10 +
+            ["Beverages/Dairy"] * 10
+        ),
+        "Food": [
+            "Apple", "Banana", "Grapes", "Orange", "Pear", "Peach", "Pineapple", "Strawberry", "Watermelon",
+            "Asparagus", "Broccoli", "Carrots", "Cucumber", "Eggplant", "Lettuce", "Tomato",
+            "Beef (cooked)", "Chicken (cooked)", "Tofu", "Egg", "Fish (Catfish, cooked)", "Pork (cooked)", "Shrimp (cooked)",
+            "Bread (white)", "Butter", "Caesar salad", "Cheeseburger", "Hamburger", "Dark Chocolate",
+            "Corn", "Pizza", "Potato", "Rice",
+            "Beer", "Coca-Cola", "Diet Coke", "Milk (1%)", "Milk (2%)", "Milk (Whole)",
+            "Orange Juice", "Apple Cider", "Yogurt (low-fat)", "Yogurt (non-fat)"
+        ],
+        "Serving Size": [
+            "1 (4 oz.)", "1 (6 oz.)", "1 cup", "1 (4 oz.)", "1 (5 oz.)", "1 (6 oz.)", "1 cup", "1 cup", "1 cup",
+            "1 cup", "1 cup", "1 cup", "4 oz.", "1 cup", "1 cup", "1 cup",
+            "2 oz.", "2 oz.", "4 oz.", "1 large", "2 oz.", "2 oz.", "2 oz.",
+            "1 slice", "1 tbsp", "3 cups", "1 sandwich", "1 sandwich", "1 oz.",
+            "1 cup", "1 slice (14\")", "6 oz.", "1 cup cooked",
+            "1 can", "1 can", "1 can", "1 cup", "1 cup", "1 cup",
+            "1 cup", "1 cup", "1 cup", "1 cup"
+        ],
+        "Protein (g)": [
+            0.27, 1.85, 1.15, 0.79, 0.54, 1.2, 0.84, 1.11, 0.93,
+            2.95, 2.57, 1.19, 0.67, 0.98, 0.5, 1.58,
+            14.2, 16, 7.82, 6.29, 9.96, 15.82, 15.45,
+            1.91, 0.12, 16.3, 14.77, 14.61, 1.57, 4.3, 13.32, 4.47, 4.2,
+            1.64, 0, 0, 8.22, 8.05, 7.86, 1.74, 0.15, 12.86, 13.01
+        ],
+        "Carbs (g)": [
+            14.36, 38.85, 28.96, 11.79, 21.91, 12.59, 19.58, 12.75, 11.48,
+            5.2, 6.04, 12.26, 2.45, 5.88, 1.63, 7.06,
+            0, 0, 2.72, 0.38, 4.84, 0, 0.69,
+            12.65, 0.01, 21.12, 31.75, 26.81, 16.84, 30.49, 33.98, 36.47, 44.08,
+            12.64, 39, 0, 12.18, 11.42, 11.03, 25.79, 28.97, 17.25, 17.43
+        ],
+        "Fat (g)": [
+            0.18, 0.56, 0.26, 0.23, 0.17, 0.33, 0.19, 0.5, 0.23,
+            0.16, 0.34, 0.31, 0.18, 0.18, 0.08, 0.36,
+            10.4, 1.84, 3.06, 4.97, 8.24, 8.26, 1.32,
+            0.82, 11.52, 45.91, 15.15, 10.97, 9.19, 1.64, 12.13, 0.22, 0.44,
+            0, 0, 0, 2.37, 4.81, 7.93, 0.5, 0.27, 3.8, 0.41
+        ]
+    }
+
+    df = pd.DataFrame(data)
+
+    # === FILTER CONTROLS (outside button scope)
+    st.subheader("🔎 Explore Foods by Category or Search")
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        category_filter = st.selectbox(
+            "Filter by Category",
+            ["All"] + sorted(df["Category"].unique().tolist())
         )
 
     with col2:
-        if st.button("✏️", key="edit_icon"):
-            st.session_state.show_uploader = not st.session_state.show_uploader
+        search_query = st.text_input("Search Food (e.g., Chicken, Banana)", "")
 
-    if st.session_state.show_uploader:
-        uploaded_file = st.sidebar.file_uploader("Upload new profile photo", type=["jpg", "jpeg", "png"])
-        if uploaded_file:
-            image = Image.open(uploaded_file).convert("RGB").resize((180, 180))
-            st.session_state.profile_photo = image
-            st.session_state.show_uploader = False
-            st.success("✅ Profile photo updated!")
-            time.sleep(0.4)
-            st.rerun()
+    filtered_df = df.copy()
+    if category_filter != "All":
+        filtered_df = filtered_df[filtered_df["Category"] == category_filter]
+    if search_query.strip():
+        filtered_df = filtered_df[
+            filtered_df["Food"].str.contains(search_query, case=False, na=False)
+        ]
 
-    st.sidebar.markdown(f"### 👋 Welcome, **{st.session_state.username}!**")
+    if filtered_df.empty:
+        st.warning("No matching foods found. Try a different search term or category.")
+    else:
+        st.dataframe(filtered_df, use_container_width=True)
 
-    # --- Sidebar Navigation Menu (stateful)
-    with st.sidebar:
-        if "selected_page" not in st.session_state:
-            st.session_state.selected_page = "Home"
+    st.caption("💡 Tip: Use this table to plan meals that match your calorie and macronutrient goals.")
 
-        selected = option_menu(
-            menu_title="Main Menu",
-            options=["Home", "BMI Calculator", "About"],
-            icons=["house", "calculator", "info-circle"],
-            menu_icon="heart-eyes-fill",
-            default_index=["Home", "BMI Calculator", "About"].index(st.session_state.selected_page),
-        )
 
-        if selected != st.session_state.selected_page:
-            st.session_state.selected_page = selected
-            st.rerun()
 
-        if st.button("🚪 Logout"):
-            for k in ["logged_in", "username", "profile_photo", "show_uploader", "selected_page"]:
-                st.session_state[k] = False if k == "logged_in" else None
-            st.session_state.page = "login"
-            st.rerun()
+# --- ABOUT PAGE
+elif selected == "About":
+    st.title("ℹ️ About This App")
+    st.write("""
+    **Physio BMI App** helps you calculate BMI, TDEE, body fat %, and water/calorie needs,  
+    offering practical diet and fitness advice tailored to your lifestyle.  
+    Built with ❤️ using **Streamlit**.
+    """)
 
-    # --- PAGE LOGIC ---
-    selected = st.session_state.selected_page
-
-    # --- PAGE: HOME
-    if selected == "Home":
-        st.title("🏠 Welcome to Physio BMI Dashboard")
-        st.write("""
-        Track your BMI, manage your profile, and get physiotherapist recommendations  
-        for a healthier, more active life! 💪
-        """)
-        st.image("https://cdn-icons-png.flaticon.com/512/706/706164.png", width=200)
-
-    # --- PAGE: BMI CALCULATOR
-    elif selected == "BMI Calculator":
-        st.title("⚖️ BMI Calculator")
-        st.caption("A simple web app to calculate BMI and provide detailed health insights.")
-
-        st.header("Enter your details")
-        name = st.text_input("Name", value=st.session_state.username or "")
-        age = st.number_input("Age", min_value=1, max_value=120, value=25)
-        gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
-        height_cm = st.number_input("Height (cm)", min_value=50.0, max_value=250.0, value=170.0)
-        weight_kg = st.number_input("Weight (kg)", min_value=10.0, max_value=300.0, value=65.0)
-
-        if st.button("Calculate BMI"):
-            height_m = height_cm / 100
-            bmi = round(weight_kg / (height_m ** 2), 2)
-
-            # --- Determine Category
-            if bmi < 18.5:
-                category, advice, icon, risk = (
-                    "Underweight",
-                    "You may need to gain some weight. Increase calorie intake with nutritious foods.",
-                    "🦴",
-                    "Low – but possible nutrient deficiencies."
-                )
-            elif bmi < 25:
-                category, advice, icon, risk = (
-                    "Normal weight",
-                    "Great! Maintain your healthy lifestyle with regular exercise and balanced meals.",
-                    "🧘",
-                    "Minimal – keep it up!"
-                )
-            elif bmi < 30:
-                category, advice, icon, risk = (
-                    "Overweight",
-                    "Try to include more physical activity and reduce processed food intake.",
-                    "🍔",
-                    "Moderate – may increase risk of heart disease."
-                )
-            else:
-                category, advice, icon, risk = (
-                    "Obesity",
-                    "Consult a physiotherapist or dietitian for a personalized health plan.",
-                    "🐻‍❄️",
-                    "High – likely associated with diabetes or heart disease."
-                )
-
-            # --- Ideal weight range
-            min_weight = round(18.5 * (height_m ** 2), 1)
-            max_weight = round(24.9 * (height_m ** 2), 1)
-
-            # --- Caloric recommendation (approximate)
-            if gender == "Male":
-                bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + 5
-            else:
-                bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age - 161
-
-            maintenance_calories = int(bmr * 1.55)  # moderate activity assumption
-
-            # --- Display Results
-            st.markdown(
-                f"""
-                <div style='text-align:center;'>
-                    <h2 style='color:#4CAF50;'>Your BMI is <b>{bmi}</b></h2>
-                    <h3>{icon} <b>{category}</b> {icon}</h3>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            st.success(f"**Advice:** {advice}")
-            st.info(f"**Health Risk Level:** {risk}")
-
-            st.write("---")
-            st.markdown(
-                f"""
-                ### 📊 Additional Insights:
-                - **Ideal Weight Range:** {min_weight} kg – {max_weight} kg  
-                - **Current Weight:** {weight_kg} kg  
-                - **Recommended Calorie Intake:** ~{maintenance_calories} kcal/day  
-                - **Height:** {height_cm} cm  
-                - **Age:** {age} years  
-                """
-            )
-
-            st.write("💡 _Tip: Reassess your BMI every 4–6 weeks to track your progress._")
-
-    # --- PAGE: ABOUT
-    elif selected == "About":
-        st.title("ℹ️ About This App")
-        st.write("""
-        **Physio BMI App** helps users calculate their BMI,  
-        maintain a fitness record, and get physiotherapy-related advice.  
-        Built with ❤️ using **Streamlit**.
-        """)
-
-    st.divider()
-    st.caption("Developed with ❤️ using Streamlit | Physiotherapy Health Tool")
+st.divider()
+st.caption("Developed with ❤️ using Streamlit | Physiotherapy Health Tool")
