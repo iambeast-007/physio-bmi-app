@@ -124,7 +124,7 @@ st.markdown(f"""
         <img src="data:image/png;base64,{logo_base64}"
              width="120"
              style="border-radius:15px; box-shadow:0 0 10px rgba(0,0,0,0.2);" />
-        <h2 style="color:#2E8B57; margin-bottom:5px; margin-left: 15px;">Ur_FitBuddy_App💪</h2>
+        <h3 style="color:#2E8B57; margin-bottom:5px; margin-left: 15px;">Ur_FitBuddy_App💪</h3>
         <p style="font-size:14px; color:#444; margin-top:0;">Biswa's A2Z Fitness Dashboard</p>
     </div>
 """, unsafe_allow_html=True)
