@@ -188,47 +188,91 @@ if selected == "Home":
     """)
     st.image("https://cdn-icons-png.flaticon.com/512/706/706164.png", width=220)
 
-# --- BMI CALCULATOR (already enhanced)
+
+# --- BMI CALCULATOR (Compact Column Layout)
 elif selected == "BMI Calculator":
     st.title("⚖️ BMI Calculator")
     st.caption("Get a full health analysis including BMI category, workout tips, diet suggestions, and calorie needs.")
 
-    name = st.text_input("Name")
-    age = st.number_input("Age", min_value=1, max_value=120, value=25)
-    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
-    height_cm = st.number_input("Height (cm)", min_value=50.0, max_value=250.0, value=170.0)
-    weight_kg = st.number_input("Weight (kg)", min_value=10.0, max_value=300.0, value=65.0)
-    activity_level = st.selectbox(
-        "Activity Level",
-        ["Sedentary (little or no exercise)",
-         "Lightly active (1-3 days/week)",
-         "Moderately active (3-5 days/week)",
-         "Very active (6-7 days/week)",
-         "Super active (physical job or athlete)"]
-    )
+    # --- Input Fields in Columns ---
+    col1, col2 = st.columns(2)
+    with col1:
+        name = st.text_input("Name")
+        age = st.number_input("Age", min_value=1, max_value=120, value=25)
+        activity_level = st.selectbox(
+            "Activity Level",
+            [
+                "Sedentary (little or no exercise)",
+                "Lightly active (1-3 days/week)",
+                "Moderately active (3-5 days/week)",
+                "Very active (6-7 days/week)",
+                "Super active (physical job or athlete)"
+            ]
+        )
+    with col2:
+        height_cm = st.number_input("Height (cm)", min_value=50.0, max_value=250.0, value=170.0)
+        weight_kg = st.number_input("Weight (kg)", min_value=10.0, max_value=300.0, value=65.0)
+        gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+        
 
+    st.markdown("---")
+
+    # --- BMI Calculation ---
     if st.button("Calculate BMI"):
         height_m = height_cm / 100
         bmi = round(weight_kg / (height_m ** 2), 2)
-        # ... same as your enhanced BMI logic ...
         st.metric("Your BMI", bmi)
+
+        # --- BMI Category ---
+        if bmi < 18.5:
+            category = "Underweight 🧍‍♂️"
+            color = "orange"
+            advice = "Increase calorie intake with healthy, nutrient-rich foods."
+        elif 18.5 <= bmi < 25:
+            category = "Normal Weight ✅"
+            color = "green"
+            advice = "Maintain with balanced diet and regular exercise."
+        elif 25 <= bmi < 30:
+            category = "Overweight ⚠️"
+            color = "yellow"
+            advice = "Add moderate cardio and control portion sizes."
+        else:
+            category = "Obese 🚨"
+            color = "red"
+            advice = "Consult a nutritionist and start a gradual fitness plan."
+
+        st.markdown(f"### 🩺 BMI Category: <span style='color:{color};'>{category}</span>", unsafe_allow_html=True)
+        st.info(f"💡 **Recommendation:** {advice}")
+
+
 
 # --- BODY FAT % ESTIMATOR
 elif selected == "Body Fat % Estimator":
     st.title("💪 Body Fat Percentage Estimator")
     st.caption("Estimate your body fat % using the Deurenberg formula.")
-    bmi = st.number_input("Enter your BMI", 10.0, 50.0, 22.0)
-    age = st.number_input("Age", 1, 120, 25)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        bmi = st.number_input("Enter your BMI", 10.0, 50.0, 22.0)
+    with col2:    
+        age = st.number_input("Age", 1, 120, 25)
     gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
     if st.button("Calculate Body Fat %"):
         bf = round(1.20 * bmi + 0.23 * age - (16.2 if gender == "Male" else 5.4), 1)
         st.metric("Estimated Body Fat %", f"{bf}%")
 
+
 # --- WAIST-TO-HEIGHT RATIO
 elif selected == "Waist-to-Height Ratio":
     st.title("📏 Waist-to-Height Ratio (WtHR)")
-    height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
-    waist_cm = st.number_input("Waist Circumference (cm)", 40.0, 200.0, 80.0)
+
+    st.caption("Calculate your Waist-to-Height Ratio to assess health risks.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
+    with col2:
+        waist_cm = st.number_input("Waist Circumference (cm)", 40.0, 200.0, 80.0)
     if st.button("Calculate WtHR"):
         whtr = round(waist_cm / height_cm, 2)
         st.metric("Waist-to-Height Ratio", whtr)
@@ -237,10 +281,13 @@ elif selected == "Waist-to-Height Ratio":
 elif selected == "Water & Calorie Guide":
     st.title("💧 Water & Calorie Recommendations")
     st.caption("Get personalized daily water and calorie needs based on your stats.")
-    age = st.number_input("Age", 1, 120, 25)
-    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
-    height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
-    weight_kg = st.number_input("Weight (kg)", 10.0, 300.0, 65.0)
+    col1, col2 = st.columns(2)
+    with col1:
+        age = st.number_input("Age", 1, 120, 25)
+        weight_kg = st.number_input("Weight (kg)", 10.0, 300.0, 65.0)
+    with col2:
+        height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
+        gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
 
     if st.button("Calculate Recommendations"):
         water_liters = round(weight_kg * 0.033, 2)
@@ -264,11 +311,14 @@ elif selected == " TDEE Calculator":
     st.caption("Understand your daily energy burn and how much you should eat to meet your goals.")
 
     st.header("🧮 Enter Your Details")
-    age = st.number_input("Age", 1, 120, 25)
-    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
-    height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
-    weight_kg = st.number_input("Weight (kg)", 10.0, 300.0, 65.0)
-    activity_level = st.selectbox(
+    col1, col2 = st.columns(2)
+    with col1:
+        age = st.number_input("Age", 1, 120, 25)
+        weight_kg = st.number_input("Weight (kg)", 10.0, 300.0, 65.0)
+        gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+    with col2:
+        height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
+        activity_level = st.selectbox(
         "Activity Level",
         ["Sedentary (little or no exercise)",
          "Lightly active (1-3 days/week)",
@@ -276,6 +326,7 @@ elif selected == " TDEE Calculator":
          "Very active (6-7 days/week)",
          "Super active (physical job or athlete)"]
     )
+    
 
     if st.button("Calculate TDEE"):
         # --- Calculate BMR (Mifflin-St Jeor Equation)
@@ -364,19 +415,23 @@ elif selected == " Calorie Calculator":
     st.caption("Find how many calories you should eat daily based on your goal — maintain, lose, or gain weight.")
 
     st.header("🧮 Enter Your Details")
-    age = st.number_input("Age", 1, 120, 25)
-    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
-    height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
-    weight_kg = st.number_input("Weight (kg)", 10.0, 300.0, 65.0)
-    activity_level = st.selectbox(
+    col1, col2 = st.columns(2)
+    with col1:
+        age = st.number_input("Age", 1, 120, 25)
+        weight_kg = st.number_input("Weight (kg)", 10.0, 300.0, 65.0)
+        gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+    with col2:
+        height_cm = st.number_input("Height (cm)", 50.0, 250.0, 170.0)
+        activity_level = st.selectbox(
         "Activity Level",
         ["Sedentary (little or no exercise)",
          "Lightly active (1-3 days/week)",
          "Moderately active (3-5 days/week)",
          "Very active (6-7 days/week)",
          "Super active (physical job or athlete)"]
-    )
-    goal = st.selectbox("Fitness Goal", ["Maintain Weight", "Lose Weight", "Gain Muscle"])
+        )
+        goal = st.selectbox("Fitness Goal", ["Maintain Weight", "Lose Weight", "Gain Muscle"])
+    
     goal_intensity = st.radio("Goal Intensity", ["Moderate (15%)", "Aggressive (25%)"], horizontal=True)
 
     if "calorie_result" not in st.session_state:
