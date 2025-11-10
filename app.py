@@ -7,6 +7,7 @@ from io import BytesIO
 # --- Custom background setup ---
 import streamlit as st
 import base64
+from streamlit_option_menu import option_menu
 
 # --- Page setup
 st.set_page_config(page_title="Physio BMI App", page_icon="🏥", layout="centered")
@@ -109,72 +110,121 @@ def load_logo(path):
 
 logo_base64 = load_logo("logo.png")
 
-st.sidebar.markdown(f"""
+
+# Centered logo + brand header
+st.markdown(f"""
     <div style="
-        margin-top: -5px;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        flex-direction: column;
-        padding: 1.5rem 0 1rem 0;
+        margin-top: -20px;
+        margin-bottom: 10px;
     ">
         <img src="data:image/png;base64,{logo_base64}"
-             width="150"
-             style="
-                margin-bottom:15px;
-                border-radius:20px;
-                box-shadow: 0 0 12px rgba(0,0,0,0.25);
-                transition: transform 0.2s ease-in-out;
-            "
-             onmouseover="this.style.transform='scale(1.08)';"
-             onmouseout="this.style.transform='scale(1)';"
-        />
-        <h1 style="color:#2E8B57; margin-bottom:5px; font-size:1.5rem; text-align:center;">Ur_FitBuddy_App💪</h1>
-        <p style="font-size:14px; color:#555; margin-top:0;">Biswa's A2Z Fitness Dashboard</p>
+             width="120"
+             style="border-radius:15px; box-shadow:0 0 10px rgba(0,0,0,0.2);" />
+        <h2 style="color:#2E8B57; margin-bottom:5px; margin-left: 15px;">Ur_FitBuddy_App💪</h2>
+        <p style="font-size:14px; color:#444; margin-top:0;">Biswa's A2Z Fitness Dashboard</p>
     </div>
 """, unsafe_allow_html=True)
 
 
-# --- Sidebar Navigation Menu
-with st.sidebar:
-    selected = option_menu(
-        menu_title="Options",
-        options=[
-            "Home",
-            "BMI Calculator",
-            "Body Fat % Estimator",
-            "Waist-to-Height Ratio",
-            "Water & Calorie Guide",
-            " TDEE Calculator",
-            " Calorie Calculator",
-            "About"
-        ],
-        icons=[
-            "house",
-            "calculator",
-            "activity",
-            "rulers",
-            "droplet",
-            "fire",
-            "apple",
-            "info-circle"
-        ],
-        menu_icon="heart-eyes-fill",
-        default_index=[
-            "Home",
-            "BMI Calculator",
-            "Body Fat % Estimator",
-            "Waist-to-Height Ratio",
-            "Water & Calorie Guide",
-            " TDEE Calculator",
-            " Calorie Calculator",
-            "About"
-        ].index(st.session_state.selected_page),
-    )
+selected = option_menu(
+    menu_title=None,
+    options=[
+        "Home",
+        "BMI Calculator",
+        "Body Fat % Estimator",
+        "Waist-to-Height Ratio",
+        "Water & Calorie Guide",
+        "TDEE Calculator",
+        "Calorie Calculator",
+        "About"
+    ],
+    icons=[
+        "house", "calculator", "activity", "rulers", "droplet", "fire", "apple", "info-circle"
+    ],
+    orientation="horizontal",
+    styles={
+        "container": {
+            "padding": "0.3rem 0.5rem",
+            "background": "linear-gradient(90deg, #e8f5e9, #c8e6c9, #a5d6a7)",  # 🌿 green tone
+            "box-shadow": "0 3px 8px rgba(0,0,0,0.15)",
+            "border": "1px solid rgba(46,139,87,0.3)",
+            "white-space": "nowrap",
+            "margin-bottom": "12px",
+            "backdrop-filter": "blur(8px)",
+            "overflow": "hidden",
+            "position": "relative",
+        },
+        "nav-link": {
+            "font-size": "13px",
+            "font-weight": "600",
+            "color": "#0f5132",
+            "padding": "0.6rem 0.9rem",
+            "margin": "0 3px",
+            "border-radius": "6px",
+            "transition": "all 0.3s ease-in-out",
+        },
+        "nav-link:hover": {
+            "background-color": "rgba(46,139,87,0.1)",
+            "color": "#1b5e20",
+        },
+        "nav-link-selected": {
+            "background": "linear-gradient(90deg, #2E8B57, #3CB371)",  # deep green
+            "color": "white",
+            "border-radius": "6px",
+            "box-shadow": "0 3px 8px rgba(46,139,87,0.25)",
+        },
+    }
+)
 
-    if selected != st.session_state.selected_page:
-        st.session_state.selected_page = selected
-        st.rerun()
+# --- CSS FIX for chamfered corners ---
+st.markdown("""
+<style>
+/* Remove default grey background */
+div[data-testid="stHorizontalBlock"] {
+    background: transparent !important;
+}
+
+/* Chamfered corners for the menu container */
+div[data-testid="stHorizontalBlock"] > div:first-child {
+    clip-path: polygon(
+        10px 0%, calc(100% - 10px) 0%, 
+        100% 10px, 100% calc(100% - 10px), 
+        calc(100% - 10px) 100%, 10px 100%, 
+        0% calc(100% - 10px), 0% 10px
+    );
+}
+
+/* Smooth hover animation for links */
+ul.nav > li > a:hover {
+    transform: translateY(-2px);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Compact responsive tweaks */
+@media (max-width: 768px) {
+    div[data-testid="stHorizontalBlock"] > div:first-child {
+        clip-path: polygon(
+            6px 0%, calc(100% - 6px) 0%, 
+            100% 6px, 100% calc(100% - 6px), 
+            calc(100% - 6px) 100%, 6px 100%, 
+            0% calc(100% - 6px), 0% 6px
+        );
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# Maintain same selection state logic
+if selected != st.session_state.selected_page:
+    st.session_state.selected_page = selected
+    st.rerun()
+
+
 
 # --- PAGE LOGIC ---
 selected = st.session_state.selected_page
@@ -306,7 +356,7 @@ elif selected == "Water & Calorie Guide":
 
 
 # --- TDEE CALCULATOR (Upgraded)
-elif selected == " TDEE Calculator":
+elif selected == "TDEE Calculator":
     st.title("🔥 TDEE Calculator (Total Daily Energy Expenditure)")
     st.caption("Understand your daily energy burn and how much you should eat to meet your goals.")
 
@@ -410,7 +460,7 @@ elif selected == " TDEE Calculator":
         st.caption("📊 Tip: Recalculate your TDEE every few months as your weight or activity level changes.")
 
 # --- CALORIE CALCULATOR (ENHANCED with Macronutrient Table)
-elif selected == " Calorie Calculator":
+elif selected == "Calorie Calculator":
     st.title("🍎 Calorie Calculator")
     st.caption("Find how many calories you should eat daily based on your goal — maintain, lose, or gain weight.")
 
@@ -601,3 +651,68 @@ elif selected == "About":
 
 st.divider()
 st.caption("Developed with ❤️ using Streamlit | Physiotherapy Health Tool")
+
+
+# --- Scroll-to-top floating button (fixed version) ---
+st.markdown("""
+<style>
+/* Scroll-to-top button styling */
+#scrollTopBtn {
+    display: none;
+    position: fixed;
+    bottom: 70px;
+    right: 22px;
+    z-index: 9999;
+    background: linear-gradient(90deg, #2E8B57, #3CB371);
+    color: white;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    transition: all 0.3s ease;
+}
+
+/* Hover glow */
+#scrollTopBtn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 14px rgba(46, 139, 87, 0.4);
+}
+
+/* Mobile tweak */
+@media (max-width: 768px) {
+    #scrollTopBtn {
+        bottom: 60px;
+        right: 15px;
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
+    }
+}
+</style>
+
+<!-- Button HTML (using an up-arrow SVG for cleaner visuals) -->
+<button id="scrollTopBtn" title="Go to top">
+    ⬆️
+</button>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const scrollTopBtn = document.getElementById("scrollTopBtn");
+    window.addEventListener("scroll", function() {
+        if (window.scrollY > 250) {
+            scrollTopBtn.style.display = "block";
+        } else {
+            scrollTopBtn.style.display = "none";
+        }
+    });
+
+    scrollTopBtn.addEventListener("click", function() {
+        window.scrollTo({top: 0, behavior: "smooth"});
+    });
+});
+</script>
+""", unsafe_allow_html=True)
